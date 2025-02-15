@@ -6,6 +6,13 @@ import os
 from datetime import datetime
 import pygetwindow as gw
 import time
+# import perplexity_test as pt
+from groq import Groq
+
+client = Groq(
+    api_key=os.environ.get("GROQ_API_KEY"),
+)
+
 
 app = Flask(__name__)
 CORS(app)  # This allows Unity to make requests to the API
@@ -73,7 +80,6 @@ def process_text():
         print(f"Error in process_text: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
-@app.route('/analyze_screen', methods=['POST'])
 @app.route('/analyze_screen', methods=['POST'])
 def analyze_screen():
     try:
@@ -173,6 +179,33 @@ def list_windows():
     except Exception as e:
         print(f"Error listing windows: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
+
+
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route("/transcribe", methods=["POST"])
+def transcribe_audio():
+    if "audio" not in request.files:
+        return jsonify({"error": "No audio file provided"}), 400
+
+    audio_file = request.files["audio"]
+    file_path = os.path.join(UPLOAD_FOLDER, audio_file.filename)
+    audio_file.save(file_path)
+
+    try:
+        with open(file_path, "rb") as file:
+            transcription = client.audio.transcriptions.create(
+                file=(file_path, file.read()),
+                model="whisper-large-v3-turbo",
+                language="en",
+                response_format="json",
+                temperature=0.0,
+            )
+        return jsonify({"transcript": transcription.text})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -1,13 +1,20 @@
 import requests
 import json
+import os
+
+API_KEY = os.getenv('API_KEY')
 
 def capture_chrome_window():
+    if not API_KEY:
+        raise ValueError("API_KEY environment variable not set")
+    
     WINDOW_NAME = "Oculus - Google Chrome"
     url = "http://localhost:5000/analyze_screen"
     
     # Send the request to capture
     data = {
-        "window_title": WINDOW_NAME
+        "window_title": WINDOW_NAME,
+        "api_key": API_KEY
     }
     
     try:
